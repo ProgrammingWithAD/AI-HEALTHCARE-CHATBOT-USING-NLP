@@ -25,7 +25,7 @@ This project implements an AI-powered Healthcare Chatbot using Natural Language 
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/AI-HEALTHCARE-CHATBOT-USING-NLP.git
+   git clone git@github.com:ProgrammingWithAD/AI-HEALTHCARE-CHATBOT-USING-NLP.git
    ```
 
 2. Navigate to the project directory:
