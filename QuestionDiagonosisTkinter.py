@@ -12,27 +12,42 @@ from sklearn.tree import DecisionTreeClassifier, _tree
 from tkinter import font as tkfont
 from PIL import Image, ImageTk, ImageFilter
 
-# Data preprocessing
+# Importing the dataset
 training_dataset = pd.read_csv('Training.csv')
 test_dataset = pd.read_csv('Testing.csv')
 
+# Slicing and Dicing the dataset to separate features from predictions
 X = training_dataset.iloc[:, 0:132].values
 Y = training_dataset.iloc[:, -1].values
+
+# Dimensionality Reduction for removing redundancies
 dimensionality_reduction = training_dataset.groupby(training_dataset['prognosis']).max()
 
+# Encoding String values to integer constants
+from sklearn.preprocessing import LabelEncoder
 labelencoder = LabelEncoder()
 y = labelencoder.fit_transform(Y)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+# Splitting the dataset into training set and test set
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state = 0)
 
+# Implementing the Decision Tree Classifier
+from sklearn.tree import DecisionTreeClassifier
 classifier = DecisionTreeClassifier()
 classifier.fit(X_train, y_train)
 
-cols = training_dataset.columns[:-1]
+# Saving the information of columns
+cols     = training_dataset.columns
+cols     = cols[:-1]
 
+# Checking the Important features
 importances = classifier.feature_importances_
 indices = np.argsort(importances)[::-1]
 features = cols
+
+# Implementing the Visual Tree
+from sklearn.tree import _tree
 
 # Implementing the HyperlinkManager class
 class HyperlinkManager:
@@ -66,10 +81,13 @@ class HyperlinkManager:
 
 # Function to handle tree traversal and diagnosis
 def print_disease(node):
-    node = node[0]
-    val = node.nonzero()
-    disease = labelencoder.inverse_transform(val[0])
-    return disease
+    #print(node)
+        node = node[0]
+        #print(len(node))
+        val  = node.nonzero() 
+        #print(val)
+        disease = labelencoder.inverse_transform(val[0])
+        return disease
 
 def recurse(node, depth):
     global tree_, feature_name, symptoms_present
@@ -78,6 +96,7 @@ def recurse(node, depth):
         name = feature_name[node]
         threshold = tree_.threshold[node]
         yield name + " ?"
+        
         if ans.lower() == 'yes':
             val = 1
         else:
@@ -88,6 +107,8 @@ def recurse(node, depth):
             symptoms_present.append(name)
             yield from recurse(tree_.children_right[node], depth + 1)
     else:
+        strData=""
+        present_disease = print_disease(tree_.value[node])
         strData = "You may have :" + str(print_disease(tree_.value[node]))
         QuestionDigonosis.objRef.txtDigonosis.insert(END, str(strData) + '\n')
         
@@ -103,16 +124,18 @@ def recurse(node, depth):
         strData = "confidence level is: " + str(confidence_level)
         QuestionDigonosis.objRef.txtDigonosis.insert(END, str(strData) + '\n')
         
-        strData = 'The model suggests:'
+        strData = 'The chatbot suggests:'
         QuestionDigonosis.objRef.txtDigonosis.insert(END, str(strData) + '\n')
         
-        row = doctors[doctors['disease'] == print_disease(tree_.value[node])[0]]
+        row = doctors[doctors['disease'] == present_disease[0]]
         strData = 'Consult ' + str(row['name'].values)
         QuestionDigonosis.objRef.txtDigonosis.insert(END, str(strData) + '\n')
         
         hyperlink = HyperlinkManager(QuestionDigonosis.objRef.txtDigonosis)
         strData = 'Visit ' + str(row['link'].values[0])
-        QuestionDigonosis.objRef.txtDigonosis.insert(INSERT, strData, hyperlink.add(lambda: webbrowser.open_new(str(row['link'].values[0]))))
+        def click1():
+                    webbrowser.open_new(str(row['link'].values[0]))
+        QuestionDigonosis.objRef.txtDigonosis.insert(INSERT, strData, hyperlink.add(click1))
         yield strData
 
 def tree_to_code(tree, feature_names):
@@ -123,6 +146,32 @@ def tree_to_code(tree, feature_names):
 
 def execute_bot():
     tree_to_code(classifier, cols)
+    
+
+# This section of code to be run after scraping the data
+
+doc_dataset = pd.read_csv('doctors_dataset.csv', names = ['Name', 'Description'])
+
+
+diseases = dimensionality_reduction.index
+diseases = pd.DataFrame(diseases)
+
+doctors = pd.DataFrame()
+doctors['name'] = np.nan
+doctors['link'] = np.nan
+doctors['disease'] = np.nan
+
+doctors['disease'] = diseases['prognosis']
+
+
+doctors['name'] = doc_dataset['Name']
+doctors['link'] = doc_dataset['Description']
+
+record = doctors[doctors['disease'] == 'AIDS']
+record['name']
+record['link']
+
+
 
 # GUI classes
 class QuestionDigonosis(Frame):
@@ -145,13 +194,13 @@ class QuestionDigonosis(Frame):
         self.lblQuestion = Label(main_frame, text="Question", width=12, bg="#001028", fg="white")
         self.lblQuestion.grid(row=0, column=0, padx=(0,10), pady=(0,10))
 
-        self.txtQuestion = Text(main_frame, width=60, height=4)
+        self.txtQuestion = Text(main_frame, width=80, height=5)
         self.txtQuestion.grid(row=0, column=1, pady=(0,10))
 
         self.lblDigonosis = Label(main_frame, text="Diagnosis", width=12, bg="#001028", fg="white")
         self.lblDigonosis.grid(row=1, column=0, padx=(0,10), pady=(0,10))
 
-        self.txtDigonosis = Text(main_frame, width=60, height=10)
+        self.txtDigonosis = Text(main_frame, width=80, height=20)
         self.txtDigonosis.grid(row=1, column=1, pady=(0,10))
 
         button_frame = Frame(main_frame, bg="#001028")
